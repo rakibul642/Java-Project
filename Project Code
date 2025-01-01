@@ -1,0 +1,326 @@
+import java.io.*;
+import java.util.*;
+
+
+// Abstract Class for User
+abstract class User {
+    protected String username;
+    protected String password;
+
+    public User(String username, String password) {
+        this.username = username;
+        this.password = password;
+    }
+
+    public abstract void menu();
+
+    public String getUsername() {
+        return username;
+    }
+}
+
+// Admin Class
+class Admin extends User {
+
+    public Admin(String username, String password) {
+        super(username, password);
+    }
+
+    @Override
+    public void menu() {
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.println("\nAdmin Panel:");
+            System.out.println("1. Set Seat Availability");
+            System.out.println("2. View Booked Seats");
+            System.out.println("3. Add Services");
+            System.out.println("4. Exit");
+            System.out.print("Enter your choice: ");
+            int choice;
+            try {
+                choice = scanner.nextInt();
+            } catch (InputMismatchException e) {
+                System.out.println("Invalid input. Please enter a number.");
+                scanner.next(); // Consume invalid input
+                continue;
+            }
+            switch (choice) {
+                case 1 -> setSeatAvailability();
+                case 2 -> viewBookedSeats();
+                case 3 -> addServices();
+                case 4 -> {
+                    return;
+                }
+                default -> System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
+
+    private void setSeatAvailability() {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter number of seats to add/update availability: ");
+        int seats;
+        try {
+            seats = scanner.nextInt();
+        } catch (InputMismatchException e) {
+            System.out.println("Invalid input. Please enter a valid number.");
+            return;
+        }
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("seats.txt"))) {
+            for (int i = 1; i <= seats; i++) {
+                writer.write("Seat " + i + " Available\n");
+            }
+            System.out.println("Seat availability updated successfully.");
+        } catch (IOException e) {
+            System.out.println("Error updating seat availability: " + e.getMessage());
+        }
+    }
+
+    private void viewBookedSeats() {
+        File file = new File("bookings.txt");
+        if (!file.exists()) {
+            System.out.println("No bookings found.");
+            return;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            System.out.println("Booked Seats Details:");
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            System.out.println("Error reading bookings file: " + e.getMessage());
+        }
+    }
+
+    private void addServices() {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter new service details: ");
+        String service = scanner.nextLine();
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("services.txt", true))) {
+            writer.write(service + "\n");
+            System.out.println("Service added successfully.");
+        } catch (IOException e) {
+            System.out.println("Error adding service: " + e.getMessage());
+        }
+    }
+}
+
+// RegularUser Class
+class RegularUser extends User {
+
+    public RegularUser(String username, String password) {
+        super(username, password);
+    }
+
+    @Override
+    public void menu() {
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.println("\nUser Panel:");
+            System.out.println("1. View Available Seats");
+            System.out.println("2. Book a Seat");
+            System.out.println("3. Exit");
+            System.out.print("Enter your choice: ");
+            int choice;
+            try {
+                choice = scanner.nextInt();
+            } catch (InputMismatchException e) {
+                System.out.println("Invalid input. Please enter a number.");
+                scanner.next(); // Consume invalid input
+                continue;
+            }
+            switch (choice) {
+                case 1 -> viewAvailableSeats();
+                case 2 -> bookSeat();
+                case 3 -> {
+                    return;
+                }
+                default -> System.out.println("Invalid choice. Please try again.");
+            }
+        }
+    }
+
+    private void viewAvailableSeats() {
+        File file = new File("seats.txt");
+        if (!file.exists()) {
+            System.out.println("Seats file does not exist.");
+            return;
+        }
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            System.out.println("Available Seats:");
+            String line;
+            boolean found = false;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("Available")) {
+                    System.out.println(line);
+                    found = true;
+                }
+            }
+            if (!found) System.out.println("No available seats.");
+        } catch (IOException e) {
+            System.out.println("Error reading seats file: " + e.getMessage());
+        }
+    }
+
+    private void bookSeat() {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter your destination: ");
+        String destination = scanner.nextLine();
+        System.out.print("Enter travel date (YYYY-MM-DD): ");
+        String travelDate = scanner.nextLine();
+        System.out.print("Enter seat number to book: ");
+        int seatNumber;
+        try {
+            seatNumber = scanner.nextInt();
+        } catch (InputMismatchException e) {
+            System.out.println("Invalid input. Please enter a valid number.");
+            return;
+        }
+
+        File inputFile = new File("seats.txt");
+        File tempFile = new File("temp.txt");
+        boolean found = false;
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(inputFile));
+             BufferedWriter writer = new BufferedWriter(new FileWriter(tempFile));
+             BufferedWriter bookingWriter = new BufferedWriter(new FileWriter("bookings.txt", true))) {
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.startsWith("Seat " + seatNumber)) {
+                    if (line.contains("Available")) {
+                        writer.write(line.replace("Available", "Booked") + "\n");
+                        bookingWriter.write("Seat " + seatNumber + " booked by " + username + ", Destination: " + destination + ", Date: " + travelDate + "\n");
+                        found = true;
+                    } else {
+                        writer.write(line + "\n");
+                        System.out.println("Seat " + seatNumber + " is already booked.");
+                    }
+                } else {
+                    writer.write(line + "\n");
+                }
+            }
+
+            if (found) {
+                System.out.println("Seat " + seatNumber + " booked successfully!");
+                if (inputFile.delete()) tempFile.renameTo(inputFile);
+            } else {
+                System.out.println("Seat not found.");
+                tempFile.delete();
+            }
+        } catch (IOException e) {
+            System.out.println("Error processing seat booking: " + e.getMessage());
+        }
+    }
+}
+
+// Main Class
+public class WaterCraftReservationSystem {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.println("Welcome to the Watercraft Reservation System");
+
+        while (true) {
+            System.out.print("Are you an admin or user? (1 for Admin, 2 for User, 0 to Exit): ");
+            int userType;
+            try {
+                userType = scanner.nextInt();
+                scanner.nextLine(); // Consume newline
+            } catch (InputMismatchException e) {
+                System.out.println("Invalid input. Please enter a valid number.");
+                scanner.next(); // Consume invalid input
+                continue;
+            }
+
+            switch (userType) {
+                case 1 -> {
+                    System.out.print("Do you have an account? (yes/no): ");
+                    String hasAccount = scanner.nextLine();
+                    if (hasAccount.equalsIgnoreCase("no")) {
+                        signup(true);
+                    } else if (hasAccount.equalsIgnoreCase("yes")) {
+                        User admin = login(true);
+                        if (admin != null) {
+                            admin.menu();
+                        }
+                    } else {
+                        System.out.println("Invalid input.");
+                    }
+                }
+                case 2 -> {
+                    System.out.print("Do you have an account? (yes/no): ");
+                    String hasAccount = scanner.nextLine();
+                    if (hasAccount.equalsIgnoreCase("no")) {
+                        signup(false);
+                    } else if (hasAccount.equalsIgnoreCase("yes")) {
+                        User user = login(false);
+                        if (user != null) {
+                            user.menu();
+                        }
+                    } else {
+                        System.out.println("Invalid input.");
+                    }
+                }
+                case 0 -> {
+                    System.out.println("Exiting the system. Goodbye!");
+                    return;
+                }
+                default -> System.out.println("Invalid user type.");
+            }
+        }
+    }
+
+    private static void signup(boolean isAdmin) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter your username: ");
+        String username = scanner.nextLine();
+        System.out.print("Enter your password: ");
+        String password = scanner.nextLine();
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("users.txt", true))) {
+            writer.write(username + " " + password + (isAdmin ? " ADMIN" : " USER") + "\n");
+            System.out.println("Signup successful!");
+        } catch (IOException e) {
+            System.out.println("Error writing to users file: " + e.getMessage());
+        }
+    }
+
+    private static User login(boolean isAdmin) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Enter your username: ");
+        String username = scanner.nextLine();
+        System.out.print("Enter your password: ");
+        String password = scanner.nextLine();
+
+        File file = new File("users.txt");
+        if (!file.exists()) {
+            System.out.println("No user accounts exist. Please sign up first.");
+            return null;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(" ");
+                if (parts[0].equals(username) && parts[1].equals(password) && 
+                    (isAdmin ? parts[2].equals("ADMIN") : parts[2].equals("USER"))) {
+                    if (isAdmin) {
+                        return new Admin(username, password);
+                    } else {
+                        return new RegularUser(username, password);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("Error reading users file: " + e.getMessage());
+        }
+
+        System.out.println("Invalid credentials or account type.");
+        return null;
+    }
+}
